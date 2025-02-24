@@ -1,4 +1,4 @@
-#!/home/omar/Code/iptables/venv/bin/python3
+#!/home/omar/iptables/flask-iptables-manager/venv/bin/python3
 # -*- coding: utf-8 -*-
 import re
 import sys
