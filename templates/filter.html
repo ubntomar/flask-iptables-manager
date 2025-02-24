@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestor de Filter - Cadena {{ chain }}</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@400;500&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <style>
+    body {
+    font-family: 'Roboto', sans-serif;
+    background-color: #f8f9fa;
+    padding: 2rem;
+    }
+
+    .card {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        margin-bottom: 2rem;
+    }
+
+    .card-header {
+        background-color: #f8f9fa;
+        border-bottom: 1px solid #dee2e6;
+        padding: 1.25rem;
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    .form-container {
+        max-width: 800px;
+        margin: 0 auto;
+    }
+
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+
+    .form-group label {
+        font-weight: 500;
+        color: #495057;
+        margin-bottom: 0.5rem;
+        display: block;
+    }
+
+    .form-control {
+        padding: 0.75rem;
+        border: 1px solid #ced4da;
+        border-radius: 4px;
+        transition: border-color 0.15s ease-in-out;
+    }
+
+    .form-control:focus {
+        border-color: #80bdff;
+        box-shadow: 0 0 0 0.2rem rgba(0,123,255,0.25);
+    }
+    select.form-control {
+    min-width: 120px; /* Asegura un ancho mínimo */
+    width: 100%; /* Toma todo el ancho disponible del contenedor */
+    padding-right: 25px; /* Espacio para la flecha del select */
+    }
+
+    /* Para asegurar que el contenedor del select tenga suficiente espacio */
+    .form-group select {
+    display: block;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    min-height: fit-content;
+    cursor: pointer;
+    padding: 0.75rem;
+    }
+
+    /* Estilo para la opción "Permitir" */
+    select.form-control option[value="permit"] {
+        color: #28a745;
+        background-color: rgba(40, 167, 69, 0.1);
+        padding: 8px;
+    }
+
+    /* Estilo para la opción "Denegar" */
+    select.form-control option[value="deny"] {
+        color: #dc3545;
+        background-color: rgba(220, 53, 69, 0.1);
+        padding: 8px;
+    }
+
+    /* Estilo para el select cuando está enfocado */
+    select.form-control:focus {
+        border-color: #80bdff;
+        box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+    }
+
+    /* Estilo para el select en hover */
+    select.form-control:hover {
+        border-color: #80bdff;
+    }
+
+    .btn-primary {
+        padding: 0.75rem 1.5rem;
+        font-weight: 500;
+        background-color: #007bff;
+        border: none;
+        transition: background-color 0.15s ease-in-out;
+    }
+
+    .table {
+        margin-top: 2rem;
+        background: white;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+
+    .table thead th {
+        background-color: #f8f9fa;
+        border-bottom: 2px solid #dee2e6;
+        padding: 1rem;
+        font-weight: 500;
+    }
+
+    .table td {
+        padding: 1rem;
+        vertical-align: middle;
+    }
+
+    .error-message {
+        color: #dc3545;
+        font-size: 0.875rem;
+        margin-top: 0.5rem;
+    }
+
+    tr.dragging {
+        background-color: #f2f2f2;
+        cursor: move;
+    }
+    /* Estilo para las opciones del select de protocolo */
+    #protocol option {
+        padding: 8px;
+        font-weight: 500;
+    }
+
+    #protocol option[value="any"] {
+        color: #6c757d;
+    }
+
+    #protocol option[value="tcp"] {
+        color: #007bff;
+    }
+
+    #protocol option[value="udp"] {
+        color: #28a745;
+    }
+
+    #protocol option[value="icmp"] {
+        color: #17a2b8;
+    }
+    .protocol {
+    text-transform: uppercase;
+    font-weight: 500;
+    }
+
+    td.protocol {
+        background-color: rgba(0,0,0,0.02);
+    }
+
+    /* Colores específicos para cada protocolo */
+    td.protocol:contains('TCP') {
+        color: #007bff;
+    }
+
+    td.protocol:contains('UDP') {
+        color: #28a745;
+    }
+
+    td.protocol:contains('ICMP') {
+        color: #17a2b8;
+    }
+
+    td.protocol:contains('ANY') {
+        color: #6c757d;
+    }
+    </style>
+</head>
+<body>
+    <div class="form-container">
+        <div class="card">
+            <div class="card-header">
+                <h3 class="mb-0">Cadena {{ chain }}</h3>
+            </div>
+            <div class="card-body">
+                <form method="post" id="filter-form" class="mb-4">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="source">Source Network:</label>
+                                <input type="text" 
+                                       id="source"
+                                       name="source" 
+                                       class="form-control"
+                                       placeholder="IP, red CIDR, hostname o 'any'" 
+                                       required>
+                                <small class="form-text text-muted">
+                                    Ejemplos válidos: 192.168.1.1, 192.168.0.0/24, hostname.domain, any
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="destination">Destination Network:</label>
+                                <input type="text" 
+                                       id="destination"
+                                       name="destination" 
+                                       class="form-control"
+                                       placeholder="IP, red CIDR, hostname o 'any'" 
+                                       required>
+                                <small class="form-text text-muted">
+                                    Ejemplos válidos: 192.168.1.1, 192.168.0.0/24, hostname.domain, any
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="protocol">Protocolo:</label>
+                                <select id="protocol" name="protocol" class="form-control">
+                                    <option value="any" selected>ANY</option>
+                                    <option value="tcp">TCP</option>
+                                    <option value="udp">UDP</option>
+                                    <option value="icmp">ICMP</option>
+                                </select>
+                                <small class="form-text text-muted">
+                                    Seleccione ANY para permitir cualquier protocolo
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="action">Acción:</label>
+                                <select id="action" name="action" class="form-control" required>
+                                    <option value="permit" style="color: #28a745">Permitir</option>
+                                    <option value="deny" style="color: #dc3545">Denegar</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="col-md-4 d-flex align-items-end">
+                            <div class="form-group mb-0">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="fas fa-plus"></i> Agregar Regla
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+    
+        <table id="rulesTable" class="table">
+            <thead>
+                <tr>
+                    <th width="5%">Orden</th>
+                    <th width="25%">Source</th>
+                    <th width="25%">Destination</th>
+                    <th width="15%">Protocolo</th>
+                    <th width="15%">Acción</th>
+                    <th width="15%">Acciones</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for rule in rules %}
+                <tr>
+                    <td>{{ loop.index }}</td>
+                    <td class="source">{{ rule.source }}</td>
+                    <td class="destination">{{ rule.destination }}</td>
+                    <td class="protocol">{{ rule.protocol | upper }}</td>
+                    <td class="action">{{ rule.action }}</td>
+                    <td>
+                        <button class="btn btn-danger btn-sm deleteBtn" data-index="{{ loop.index0 }}">
+                            <i class="fas fa-trash-alt"></i> Eliminar
+                        </button>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+<script src="/static/js/validation.js"></script>
+<script>
+    var tbody = document.getElementById('rulesTable').getElementsByTagName('tbody')[0];
+    var sortable = Sortable.create(tbody, {
+        animation: 150,
+        onEnd: function(evt) {
+            updateOrder();
+        }
+    });
+
+    function updateOrder() {
+        var newRules = [];
+        $("#rulesTable tbody tr").each(function(){
+            var source = $(this).find('.source').text();
+            var destination = $(this).find('.destination').text();
+            var protocol = $(this).find('.protocol').text().toLowerCase();
+            var action = $(this).find('.action').text();
+            newRules.push({
+                source: source, 
+                destination: destination, 
+                protocol: protocol,
+                action: action
+            });
+        });
+        
+        $.ajax({
+            url: "/filter/update_order/{{ chain }}",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({rules: newRules}),
+            success: function(response) {
+                $("#rulesTable tbody tr").each(function(index){
+                    $(this).find("td:first").text(index+1);
+                });
+            }
+        });
+    }
+
+    // Eliminación de regla
+    $('.deleteBtn').click(function(e){
+        e.preventDefault();
+        var index = $(this).data('index');
+        $.ajax({
+            url: "/filter/delete/{{ chain }}",
+            type: "POST",
+            contentType: "application/json",
+            data: JSON.stringify({index: index}),
+            success: function(response){
+                location.reload();
+            },
+            error: function(xhr, status, error){
+                alert("Error al eliminar: " + error);
+            }
+        });
+    });
+</script>
+
+</body>
+</html>

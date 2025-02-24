@@ -1,0 +1,313 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <title>Gestor de NAT - Cadena {{ chain }}</title>
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+    <style>
+        body {
+            padding: 20px;
+            margin: 0;
+            overflow: hidden;
+        }
+        
+        .container {
+            padding: 0;
+            width: 100%;
+            max-width: none;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        .table-container {
+            margin-top: 20px;
+        }
+        
+        .error-message {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 0.25rem;
+        }
+        
+        .is-invalid {
+            border-color: #dc3545;
+        }
+
+        .card {
+            margin-bottom: 20px;
+            border: none;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .card-header {
+            background-color: #f8f9fa;
+            border-bottom: 1px solid #dee2e6;
+            padding: 15px;
+        }
+
+        .form-text {
+            color: #6c757d;
+            font-size: 0.875rem;
+        }
+
+        .protocol-tcp {
+            color: #007bff;
+            font-weight: 500;
+        }
+
+        .protocol-udp {
+            color: #28a745;
+            font-weight: 500;
+        }
+
+        select.form-control {
+            min-width: 120px;
+        }
+
+        .btn-primary {
+            padding: 8px 16px;
+        }
+
+        .table td {
+            vertical-align: middle;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h3>Cadena NAT: {{ chain }}</h3>
+        
+        <!-- Formulario para PREROUTING (DNAT) -->
+        {% if chain == "PREROUTING" %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Configuración de DNAT</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="dnat-form">
+                    <input type="hidden" name="nat_type" value="dnat">
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="source">IP de Origen (opcional):</label>
+                                <input type="text" 
+                                       id="source"
+                                       name="source" 
+                                       class="form-control"
+                                       placeholder="Ej: 47.88.79.231 (dejar vacío para cualquiera)"
+                                       value="{{ request.form.get('source', '') }}">
+                                <small class="form-text text-muted">
+                                    Dirección IP del cliente externo
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="protocol">Protocolo:</label>
+                                <select id="protocol" name="protocol" class="form-control">
+                                    <option value="tcp" selected>TCP</option>
+                                    <option value="udp">UDP</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="dport">Puerto de Entrada:</label>
+                                <input type="number" 
+                                       id="dport"
+                                       name="dport" 
+                                       class="form-control"
+                                       value="8080"
+                                       min="1"
+                                       max="65535"
+                                       required>
+                                <small class="form-text text-muted">
+                                    Puerto por el que entran las solicitudes (1-65535)
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="to_destination_ip">IP Local de Destino:</label>
+                                <input type="text" 
+                                       id="to_destination_ip"
+                                       name="to_destination_ip" 
+                                       class="form-control"
+                                       placeholder="Ej: 192.168.1.10"
+                                       required>
+                                <small class="form-text text-muted">
+                                    IP local donde se redirigirá el tráfico
+                                </small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="to_destination_port">Puerto Local de Destino:</label>
+                                <input type="number" 
+                                       id="to_destination_port"
+                                       name="to_destination_port" 
+                                       class="form-control"
+                                       value="80"
+                                       min="1"
+                                       max="65535"
+                                       required>
+                                <small class="form-text text-muted">
+                                    Puerto donde escucha el servicio local
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Agregar Regla DNAT
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Formulario para POSTROUTING (Masquerade) -->
+        {% if chain == "POSTROUTING" %}
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">Configuración de Masquerade</h5>
+            </div>
+            <div class="card-body">
+                <form method="post" id="masquerade-form">
+                    <input type="hidden" name="nat_type" value="masquerade">
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="destination">Destination Network (opcional):</label>
+                                <input type="text" 
+                                       id="destination"
+                                       name="destination" 
+                                       class="form-control"
+                                       placeholder="Ej. 10.0.0.0/24"
+                                       value="{{ request.form.get('destination', '') }}">
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label for="interface">Interface (opcional):</label>
+                                <select id="interface" name="interface" class="form-control">
+                                    <option value="">Todas las interfaces</option>
+                                    {% for iface in network_interfaces %}
+                                    <option value="{{ iface }}" {% if iface == request.form.get('interface') %}selected{% endif %}>
+                                        {{ iface }}
+                                    </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-plus"></i> Agregar Regla Masquerade
+                    </button>
+                </form>
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Tabla de reglas -->
+        <div class="table-container">
+            <table id="natRulesTable" class="table table-bordered table-hover">
+                <thead class="thead-light">
+                    <tr>
+                        <th style="width: 5%">Orden</th>
+                        <th>Detalles</th>
+                        <th style="width: 10%">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for rule in rules %}
+                    <tr>
+                        <td>{{ loop.index }}</td>
+                        <td>
+                            {% if rule.target.upper() == "MASQUERADE" %}
+                                <strong>Masquerade:</strong> 
+                                {% if rule.destination %}Destination: {{ rule.destination }} | {% endif %}
+                                Interface: {{ rule.interface if rule.interface else 'Todas' }}
+                            {% elif rule.target.upper() == "DNAT" %}
+                                <strong>DNAT:</strong>
+                                {% if rule.source %}Source: {{ rule.source }} | {% endif %}
+                                Protocol: <span class="protocol-{{ rule.protocol }}">{{ rule.protocol | upper }}</span> |
+                                Port: {{ rule.dport }} → {{ rule.to }}
+                            {% endif %}
+                        </td>
+                        <td>
+                            <button class="deleteNatBtn btn btn-danger btn-sm" data-index="{{ loop.index0 }}">
+                                <i class="fas fa-trash-alt"></i> Eliminar
+                            </button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sortablejs@1.15.0/Sortable.min.js"></script>
+    <script src="{{ url_for('static', filename='js/validation.js') }}"></script>
+    
+    <script>
+        // Inicializar Sortable para la tabla
+        var tbody = document.getElementById('natRulesTable').getElementsByTagName('tbody')[0];
+        var sortable = Sortable.create(tbody, {
+            animation: 150,
+            onEnd: function(evt) {
+                updateNatOrder();
+            }
+        });
+
+        // Actualizar orden de reglas
+        function updateNatOrder() {
+            var newRules = [];
+            $("#natRulesTable tbody tr").each(function(){
+                var details = $(this).find('td:nth-child(2)').text();
+                newRules.push({details: details});
+            });
+            
+            $.ajax({
+                url: "/nat/update_order/{{ chain }}",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({rules: newRules}),
+                success: function(response) {
+                    $("#natRulesTable tbody tr").each(function(index){
+                        $(this).find("td:first").text(index+1);
+                    });
+                }
+            });
+        }
+
+        // Eliminación de reglas
+        $('.deleteNatBtn').click(function(e){
+            e.preventDefault();
+            var index = $(this).data('index');
+            $.ajax({
+                url: "/nat/delete/{{ chain }}",
+                type: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({index: index}),
+                success: function(response){
+                    location.reload();
+                }
+            });
+        });
+    </script>
+</body>
+</html>
